@@ -1,0 +1,23 @@
+name: Release Prod
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push-prod:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build and push Prod image
+        uses: QRify-platform/github-actions/docker-build-push@main
+        with:
+          image-name: ${{ github.event.repository.name }}-prod
+          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-2
+          ecr-registry: ${{ secrets.AWS_ECR_REGISTRY }}

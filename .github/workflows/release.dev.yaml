@@ -1,0 +1,25 @@
+name: Release Dev 
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build and push Dev image
+        uses: QRify-platform/github-actions/docker-build-push@main
+        with:
+          image-name: ${{ github.event.repository.name }}-dev
+          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-2
+          ecr-registry: ${{ secrets.AWS_ECR_REGISTRY }}
