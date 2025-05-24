@@ -17,7 +17,7 @@ jobs:
       - name: Build and push Prod image
         uses: QRify-platform/github-actions/docker-build-push@main
         with:
-          image-name: ${{ github.repository }}-prod
+          image-name: qrify-web-api-prod
           aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-2
           ecr-registry: ${{ secrets.AWS_ECR_REGISTRY }}
