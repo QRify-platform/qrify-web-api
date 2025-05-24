@@ -19,7 +19,7 @@ jobs:
       - name: Build and push Dev image
         uses: QRify-platform/github-actions/docker-build-push@main
         with:
-          image-name: ${{ github.event.repository.name }}-dev
+          image-name: ${{ github.repository }}-dev
           aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-2
           ecr-registry: ${{ secrets.AWS_ECR_REGISTRY }}
