@@ -4,7 +4,8 @@ import qrcode
 import boto3
 import os
 from io import BytesIO
-
+import re
+import traceback
 # Loading Environment variable (AWS Access Key and Secret Key)
 from dotenv import load_dotenv
 load_dotenv()
@@ -29,7 +30,7 @@ s3 = boto3.client(
     aws_access_key_id= os.getenv("AWS_ACCESS_KEY"),
     aws_secret_access_key= os.getenv("AWS_SECRET_KEY"))
 
-bucket_name = 'YOUR_BUCKET_NAME' # Add your bucket name here
+bucket_name = 'qrify-platform-storage'
 
 @app.post("/generate-qr/")
 async def generate_qr(url: str):
@@ -51,15 +52,26 @@ async def generate_qr(url: str):
     img_byte_arr.seek(0)
 
     # Generate file name for S3
-    file_name = f"qr_codes/{url.split('//')[-1]}.png"
+    def sanitize_filename(url: str):
+        return "qr_codes/" + re.sub(r'[^\w\-_.]', '_', url) + ".png"
+
+    file_name = sanitize_filename(url)
 
     try:
         # Upload to S3
-        s3.put_object(Bucket=bucket_name, Key=file_name, Body=img_byte_arr, ContentType='image/png', ACL='public-read')
+        s3.put_object(Bucket=bucket_name, Key=file_name, Body=img_byte_arr, ContentType='image/png')
         
         # Generate the S3 URL
-        s3_url = f"https://{bucket_name}.s3.amazonaws.com/{file_name}"
+        s3_url = s3.generate_presigned_url(
+            ClientMethod='get_object',
+            Params={
+                'Bucket': bucket_name,
+                'Key': file_name,
+            },
+            ExpiresIn=600  # valid for 10 minutes
+        )
         return {"qr_code_url": s3_url}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print("UPLOAD FAILED:\n", traceback.format_exc())
+        raise HTTPException(status_code=500, detail="QR code generation failed")
     
