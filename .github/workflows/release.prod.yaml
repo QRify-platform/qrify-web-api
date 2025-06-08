@@ -1,6 +1,8 @@
-name: Release Prod
+name: Release Dev 
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -8,16 +10,25 @@ permissions:
   contents: read
 
 jobs:
-  build-and-push-prod:
+  build-and-push-dev:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Build and push Prod image
+      - name: Build and push Dev image
+        id: build  
         uses: QRify-platform/github-actions/docker-build-push@main
         with:
           image-name: qrify-web-api-prod
           aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-2
           ecr-registry: ${{ secrets.AWS_ECR_REGISTRY }}
+
+      - name: Update image tag in cluster-state
+        uses: QRify-platform/github-actions/update-app-tag@main
+        with:
+          image-tag: ${{ steps.build.outputs.tag }}  
+          github-token: ${{ secrets.CLUSTER_STATE_PAT }}
+          cluster-repo: QRify-platform/cluster-state
+          values-file-path: apps/qrify-web-api/values.prod.yaml
