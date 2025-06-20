@@ -40,6 +40,5 @@
 ### 📁 Clone and Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/qrify-web-api.git
 cd qrify-web-api
 pip install -r requirements.txt
