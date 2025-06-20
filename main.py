@@ -11,21 +11,19 @@ import re
 import traceback
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 app = FastAPI()
 
-# Enable CORS for frontend dev (update origin in prod)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ← Replace with frontend domain in prod
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Add Prometheus metrics endpoint
+#  Prometheus metrics endpoint
 Instrumentator().instrument(app).expose(app)
 
 # AWS S3 setup
@@ -35,6 +33,11 @@ s3 = boto3.client(
     aws_secret_access_key=os.getenv("AWS_SECRET_KEY")
 )
 bucket_name = 'qrify-platform-storage'
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.post("/generate-qr/")
 async def generate_qr(url: str):
