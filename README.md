@@ -6,23 +6,26 @@
 
 ## 🚀 Features
 
-- 🔗 Accepts a URL via API and generates a PNG QR Code
+- 🔗 Accepts a **URL** via API and generates a PNG QR Code
 - ☁️ Uploads the QR code to **Amazon S3**
-- 🌍 Returns a **publicly accessible URL** to the QR code
-- 🤝 Supports **CORS** for local frontend development
-- 🧪 Lightweight, fast, and cloud-ready
-
+- 🌍 Returns a **publicly accessible URL** to the QR code (via presigned S3 link)
+- 🌐 Supports **CORS** for local frontend development
+- 🩺 **Health check** endpoint at `/health` for monitoring readiness
+- 📊 **Prometheus metrics** exposed at `/metrics` for observability and scraping
+- 🧪 Lightweight, fast, and cloud-ready — perfect for serverless, containers, or Kubernetes
 ---
 
 ## ⚙️ Tech Stack
-
-| Technology | Description                     |
-|------------|---------------------------------|
-| FastAPI    | Python async web framework      |
-| qrcode     | Python QR code generation lib   |
-| Boto3      | AWS SDK for Python (S3 uploads) |
-| dotenv     | Loads environment secrets       |
-| CORS       | Enabled for frontend access     |
+| Technology   | Description                                      |
+|--------------|--------------------------------------------------|
+| FastAPI      | Python async web framework                       |
+| Uvicorn      | ASGI server to run FastAPI                       |
+| qrcode       | Python QR code generation library                |
+| Boto3        | AWS SDK for Python (used for S3 uploads)         |
+| python-dotenv| Loads environment variables from `.env`          |
+| Prometheus   | Monitoring tool, scrapes metrics from API        |
+| Instrumentator | Exposes FastAPI metrics in Prometheus format  |
+| CORS         | Cross-Origin Resource Sharing (frontend support) |
 
 ---
 
