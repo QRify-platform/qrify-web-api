@@ -1,18 +1,28 @@
 # 1. Use slim Python image
 FROM python:3.10-slim
 
-# 2. Set working directory
+
 WORKDIR /app
 
-# 3. Install dependencies
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libjpeg-dev \
+    zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 4. Copy source code
+
 COPY . .
 
-# 5. Expose FastAPI port
+
+ENV PYTHONPATH=/app
+
+
 EXPOSE 8000
 
-# 6. Run app with uvicorn
+
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
