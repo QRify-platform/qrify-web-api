@@ -28,31 +28,6 @@ app.add_middleware(
 # Add Prometheus metrics endpoint
 Instrumentator().instrument(app).expose(app)
 
-# Create custom Prometheus Counter metric with labels
-frontend_metric_counter = Counter(
-    "frontend_events_total",
-    "Total frontend events from the React app",
-    ["metric", "path"]
-)
-
-# Optional Pydantic model for POST payload
-class MetricPayload(BaseModel):
-    metric: str
-    path: str = "/"  # Default to "/" if not provided
-
-@app.post("/track-metric")
-async def track_metric(payload: MetricPayload):
-    """
-    Accepts frontend metric and increments the labeled counter.
-    Example payload: { "metric": "page_load", "path": "/pricing" }
-    """
-    try:
-        frontend_metric_counter.labels(metric=payload.metric, path=payload.path).inc()
-        return {"message": "Metric tracked"}
-    except Exception as e:
-        print("Metric tracking error:", e)
-        raise HTTPException(status_code=500, detail="Failed to track metric")
-
 # AWS S3 setup
 s3 = boto3.client(
     's3',
