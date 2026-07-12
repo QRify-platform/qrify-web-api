@@ -21,7 +21,7 @@ jobs:
           image-name: qrify-web-api-prod
           aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: us-east-2
-          ecr-registry: 856096729725.dkr.ecr.us-east-2.amazonaws.com
+          ecr-registry: ${{ secrets.AWS_ECR_REGISTRY }}
 
       - name: Update image tag in cluster-state
         uses: QRify-platform/github-actions/update-app-tag@main
