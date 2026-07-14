@@ -12,7 +12,6 @@
 - 📊 **Prometheus metrics** exposed at `/metrics` for observability and scraping
 - 🧪 Lightweight, fast, and cloud-ready — perfect for serverless, containers, or Kubernetes
 ---
-
 ## ⚙️ Tech Stack
 | Technology   | Description                                      |
 |--------------|--------------------------------------------------|
