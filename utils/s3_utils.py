@@ -1,6 +1,7 @@
 import os
 
 import boto3
+from botocore.config import Config
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,9 +14,14 @@ if os.getenv("AWS_ACCESS_KEY") and os.getenv("AWS_SECRET_KEY"):
         "aws_secret_access_key": os.getenv("AWS_SECRET_KEY"),
     }
 
+# Regional endpoint so presigned URLs are signed for the correct Host.
+# Global s3.amazonaws.com redirects to s3.<region>.amazonaws.com and breaks SigV4.
+_region = os.getenv("AWS_REGION", os.getenv("AWS_DEFAULT_REGION", "us-east-2"))
 s3 = boto3.client(
     "s3",
-    region_name=os.getenv("AWS_REGION", os.getenv("AWS_DEFAULT_REGION", "us-east-2")),
+    region_name=_region,
+    endpoint_url=f"https://s3.{_region}.amazonaws.com",
+    config=Config(signature_version="s3v4"),
     **_session_kwargs,
 )
 
