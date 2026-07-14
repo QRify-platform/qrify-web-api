@@ -1,7 +1,6 @@
 # QRify Web API
 
 **QRify Web API** is the backend service for the QRify platform. It provides a FastAPI-powered endpoint to generate QR codes from user-submitted URLs and store them in an AWS S3 bucket.
-
 ---
 ## 🚀 Features
 
