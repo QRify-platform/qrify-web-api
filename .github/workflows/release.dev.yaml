@@ -21,9 +21,9 @@ jobs:
         uses: QRify-platform/github-actions/docker-build-push@main
         with:
           image-name: qrify-web-api-dev
-          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-role-to-assume: ${{ vars.AWS_ECR_ROLE_TO_ASSUME }}
           aws-region: us-east-2
-          ecr-registry: ${{ secrets.AWS_ECR_REGISTRY }}
+          ecr-registry: ${{ vars.AWS_ECR_REGISTRY }}
 
       - name: Update image tag in cluster-state
         uses: QRify-platform/github-actions/update-app-tag@main
