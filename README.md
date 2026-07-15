@@ -10,7 +10,7 @@
 - 🌐 Supports **CORS** for local frontend development
 - 🩺 **Health check** endpoint at `/health` for monitoring readiness
 - 📊 **Prometheus metrics** exposed at `/metrics` for observability and scraping
-- 🧪 Lightweight, fast, and cloud-ready — perfect for serverless, containers, or Kubernetes
+- 🧪 Lightweight, fast, and cloud-ready — perfect for serverless, containers or Kubernetes
 ---
 ## ⚙️ Tech Stack
 | Technology   | Description                                      |
