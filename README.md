@@ -21,10 +21,11 @@ Client → FastAPI routes (api/routes.py)
 
 | Method | Path | Notes |
 |--------|------|--------|
-| `POST` | `/qr-codes` | JSON `{"url":"..."}` → `201` + `id` + `download_url` |
-| `GET` | `/qr-codes/{id}` | Fresh presign from stored `s3_key` |
-| `POST` | `/generate-qr/?url=...` | Compat for current Next.js UI |
-| `GET` | `/health` | Liveness |
+| `POST` | `/qr-codes` | Auth required. JSON `{"url":"..."}` → `201` + `id` + `download_url` |
+| `GET` | `/qr-codes` | Auth required. List my codes |
+| `GET` | `/qr-codes/{id}` | Auth required. Fresh presign (owner only) |
+| `POST` | `/generate-qr/?url=...` | Auth required. Compat for current Next.js UI |
+| `GET` | `/health` | Liveness (public) |
 
 ## Env
 
@@ -43,4 +44,6 @@ export DATABASE_URL=postgresql://...   # needed at startup
 PYTHONPATH=. pytest test_main.py -v    # unit tests mock DB/S3
 ```
 
-Tech: FastAPI, Uvicorn, qrcode, boto3, psycopg, Prometheus instrumentator.
+Tech: FastAPI, Uvicorn, qrcode, boto3, psycopg, PyJWT (Cognito), Prometheus instrumentator.
+
+Auth: Cognito JWT (`Authorization: Bearer`). Create/list/get require a valid token; rows store `user_id` = Cognito `sub`.

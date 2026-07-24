@@ -17,11 +17,11 @@ from db import qr_codes as qr_repo
 from utils.s3_utils import PRESIGN_EXPIRES, presign_get, upload_png
 
 
-def create_qr_code(source_url: str) -> dict:
+def create_qr_code(source_url: str, *, user_id: str) -> dict:
     """
     1) Generate PNG
     2) Upload to S3 under a unique key
-    3) Insert metadata row
+    3) Insert metadata row (owned by user_id = Cognito sub)
     4) Return row + a fresh download_url
     """
     qr_id = uuid4()
@@ -38,6 +38,7 @@ def create_qr_code(source_url: str) -> dict:
             qr_id=qr_id,
             source_url=source_url,
             s3_key=s3_key,
+            user_id=user_id,
         )
     except Exception as exc:
         # Image may already be in S3; for a demo we leave it (orphan cleanup is a later topic).
@@ -46,8 +47,8 @@ def create_qr_code(source_url: str) -> dict:
     return _with_download_url(row)
 
 
-def get_qr_code(qr_id: str) -> dict:
-    """Look up metadata by id and mint a NEW presigned URL (old ones may have expired)."""
+def get_qr_code(qr_id: str, *, user_id: str) -> dict:
+    """Look up metadata by id; only the owner can read."""
     try:
         parsed = UUID(qr_id)
     except ValueError as exc:
@@ -57,7 +58,15 @@ def get_qr_code(qr_id: str) -> dict:
     if row is None:
         raise HTTPException(status_code=404, detail="QR code not found")
 
+    if row.get("user_id") and row["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Not your QR code")
+
     return _with_download_url(row)
+
+
+def list_my_qr_codes(*, user_id: str) -> list[dict]:
+    rows = qr_repo.list_qr_codes_for_user(user_id)
+    return [_with_download_url(row) for row in rows]
 
 
 def _render_png(source_url: str) -> BytesIO:

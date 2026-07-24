@@ -23,9 +23,15 @@ CREATE TABLE IF NOT EXISTS qr_codes (
     id          UUID PRIMARY KEY,
     source_url  TEXT NOT NULL,
     s3_key      TEXT NOT NULL UNIQUE,
+    user_id     TEXT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 """
+
+MIGRATE_SQL = [
+    "ALTER TABLE qr_codes ADD COLUMN IF NOT EXISTS user_id TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_qr_codes_user_id ON qr_codes (user_id)",
+]
 
 
 def init_db() -> None:
@@ -47,6 +53,8 @@ def init_db() -> None:
     )
     with _pool.connection() as conn:
         conn.execute(SCHEMA_SQL)
+        for stmt in MIGRATE_SQL:
+            conn.execute(stmt)
         conn.commit()
 
 
