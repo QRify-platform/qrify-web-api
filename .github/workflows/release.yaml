@@ -9,8 +9,9 @@ permissions:
   id-token: write
   contents: read
 
-# Push to main → deploy dev only.
-# Actions → Release → Run workflow → build + deploy dev, then promote same tag to prod.
+# Push to main → deploy dev, then wait for GitHub Environment "production"
+# required-reviewer approval before promoting the same image tag to prod.
+# Scaffold / org setup creates that environment with reviewers automatically.
 
 jobs:
   deploy-dev:
@@ -39,7 +40,6 @@ jobs:
 
   promote-prod:
     needs: deploy-dev
-    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: production
     steps:
