@@ -1,9 +1,4 @@
-"""
-Verify Cognito JWTs (ID or access token) using the pool's JWKS.
-
-Env (from Secrets Manager → ESO → qrify-cognito):
-  COGNITO_REGION, COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID, COGNITO_ISSUER
-"""
+"""Cognito JWT verification (JWKS)."""
 
 from __future__ import annotations
 
@@ -45,7 +40,6 @@ def _jwks_client() -> PyJWKClient:
 
 
 def verify_token(token: str) -> dict[str, Any]:
-    """Validate signature + issuer + audience/client, return claims."""
     cfg = _settings()
     if not cfg["issuer"] or not cfg["client_id"]:
         raise HTTPException(
@@ -80,7 +74,6 @@ def verify_token(token: str) -> dict[str, Any]:
         if claims.get("client_id") != cfg["client_id"]:
             raise HTTPException(status_code=401, detail="Token client mismatch")
     else:
-        # Still accept if aud or client_id matches (defensive).
         if claims.get("aud") != cfg["client_id"] and claims.get("client_id") != cfg["client_id"]:
             raise HTTPException(status_code=401, detail="Token not issued for this app")
 
@@ -90,7 +83,6 @@ def verify_token(token: str) -> dict[str, Any]:
 def get_current_user(
     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> dict[str, Any]:
-    """FastAPI dependency: requires Authorization: Bearer <cognito jwt>."""
     if creds is None or creds.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

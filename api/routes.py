@@ -1,9 +1,4 @@
-"""
-HTTP layer (controller / router).
-
-Keep this thin: validate input → call service → return status codes.
-No SQL or boto3 here.
-"""
+"""HTTP routes."""
 
 from __future__ import annotations
 

@@ -1,9 +1,4 @@
-"""
-Simple in-memory IP rate limiter for demo abuse protection.
-
-Not Redis / distributed — fine for a single-replica interview demo.
-Disable with RATE_LIMIT_ENABLED=false (e.g. unit tests).
-"""
+"""In-memory per-IP rate limiter."""
 
 from __future__ import annotations
 

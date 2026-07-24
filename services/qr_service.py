@@ -1,9 +1,4 @@
-"""
-QR use-cases: preview (no persistence), save (S3 + DB), and fetch by id.
-
-This is the "service" layer — no FastAPI types here, so it's easy to test
-and easy to explain in an interview.
-"""
+"""QR preview, save, and fetch."""
 
 from __future__ import annotations
 

@@ -2,7 +2,7 @@
 
 Backend for QRify: generate QR PNGs, store them in private S3, and keep durable metadata in Postgres.
 
-## How it fits together (interview cheat sheet)
+## Architecture
 
 ```
 Client → FastAPI routes (api/routes.py)

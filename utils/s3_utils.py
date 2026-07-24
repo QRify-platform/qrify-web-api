@@ -1,11 +1,4 @@
-"""
-S3 adapter: upload PNG bytes and mint short-lived download URLs.
-
-Interview talking point:
-  - Bucket stays private (IRSA on the pod for Put/Get)
-  - Browsers get temporary presigned GET URLs (expire in PRESIGN_EXPIRES seconds)
-  - We store s3_key in Postgres, never the presigned URL
-"""
+"""S3 upload and presigned download URLs."""
 
 from __future__ import annotations
 
@@ -21,7 +14,6 @@ PRESIGN_EXPIRES = 600  # 10 minutes
 
 _session_kwargs = {}
 if os.getenv("AWS_ACCESS_KEY") and os.getenv("AWS_SECRET_KEY"):
-    # Local .env only — in EKS we use IRSA (default credential chain).
     _session_kwargs = {
         "aws_access_key_id": os.getenv("AWS_ACCESS_KEY"),
         "aws_secret_access_key": os.getenv("AWS_SECRET_KEY"),
@@ -36,11 +28,10 @@ s3 = boto3.client(
     **_session_kwargs,
 )
 
-BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "qrify-web-platform-storage")
+BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "qrify-web-platform-storage-prod")
 
 
 def upload_png(file_buffer, s3_key: str) -> None:
-    """Store the QR image. Caller chooses a unique s3_key (usually uuid-based)."""
     s3.put_object(
         Bucket=BUCKET_NAME,
         Key=s3_key,
@@ -50,12 +41,10 @@ def upload_png(file_buffer, s3_key: str) -> None:
 
 
 def delete_object(s3_key: str) -> None:
-    """Remove a private object. Missing keys are fine (idempotent cleanup)."""
     s3.delete_object(Bucket=BUCKET_NAME, Key=s3_key)
 
 
 def presign_get(s3_key: str, expires_in: int = PRESIGN_EXPIRES) -> str:
-    """Temporary GET URL for a private object. Safe to call again later for the same key."""
     return s3.generate_presigned_url(
         ClientMethod="get_object",
         Params={"Bucket": BUCKET_NAME, "Key": s3_key},

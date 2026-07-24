@@ -1,11 +1,4 @@
-"""
-Postgres access for QRify.
-
-Interview talking point:
-  - S3 holds the PNG bytes
-  - Postgres holds durable metadata (id ↔ s3_key)
-  - Presigned URLs are NOT stored; we recreate them from s3_key on read
-"""
+"""Postgres connection pool."""
 
 from __future__ import annotations
 
@@ -35,7 +28,6 @@ MIGRATE_SQL = [
 
 
 def init_db() -> None:
-    """Open a connection pool and ensure the qr_codes table exists."""
     global _pool
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
