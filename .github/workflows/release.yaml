@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+# Deploy to dev on every main push, then wait for GitHub Environment
+# "production" approval before promoting the same image tag to prod.
+# Configure required reviewers on the production environment in repo Settings.
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.build.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and push Dev image
+        id: build
+        uses: QRify-platform/github-actions/docker-build-push@main
+        with:
+          image-name: qrify-web-api-dev
+          aws-role-to-assume: ${{ vars.AWS_ECR_ROLE_TO_ASSUME }}
+          aws-region: us-east-2
+          ecr-registry: ${{ vars.AWS_ECR_REGISTRY }}
+
+      - name: Point cluster-state dev at new tag
+        uses: QRify-platform/github-actions/update-app-tag@main
+        with:
+          image-tag: ${{ steps.build.outputs.tag }}
+          github-token: ${{ secrets.CLUSTER_STATE_PAT }}
+          cluster-repo: QRify-platform/cluster-state
+          values-file-path: apps/qrify-web-api/values.dev.yaml
+
+  promote-prod:
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Promote image to prod ECR repo
+        uses: QRify-platform/github-actions/ecr-retag@main
+        with:
+          source-image-name: qrify-web-api-dev
+          target-image-name: qrify-web-api-prod
+          image-tag: ${{ needs.deploy-dev.outputs.tag }}
+          aws-role-to-assume: ${{ vars.AWS_ECR_ROLE_TO_ASSUME }}
+          aws-region: us-east-2
+          ecr-registry: ${{ vars.AWS_ECR_REGISTRY }}
+
+      - name: Point cluster-state prod at promoted tag
+        uses: QRify-platform/github-actions/update-app-tag@main
+        with:
+          image-tag: ${{ needs.deploy-dev.outputs.tag }}
+          github-token: ${{ secrets.CLUSTER_STATE_PAT }}
+          cluster-repo: QRify-platform/cluster-state
+          values-file-path: apps/qrify-web-api/values.prod.yaml
