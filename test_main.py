@@ -57,18 +57,31 @@ def test_create_qr_codes(mock_insert, mock_upload, mock_presign):
 @patch("services.qr_service.presign_get", return_value=FAKE_URL)
 @patch("services.qr_service.upload_png")
 @patch("services.qr_service.qr_repo.insert_qr_code", return_value=FAKE_ROW)
-def test_generate_qr_compat(mock_insert, mock_upload, mock_presign):
-    """Old web UI still posts to /generate-qr/?url=..."""
+def test_generate_qr_is_preview_only(mock_insert, mock_upload, mock_presign):
+    """Generate returns a data URL and does not persist."""
     with _client() as client:
         response = client.post("/generate-qr/", params={"url": "http://example.com"})
 
     assert response.status_code == 200
-    assert response.json()["qr_code_url"] == FAKE_URL
+    body = response.json()
+    assert body["source_url"].startswith("http://example.com")
+    assert body["qr_code_url"].startswith("data:image/png;base64,")
+    mock_upload.assert_not_called()
+    mock_insert.assert_not_called()
+    mock_presign.assert_not_called()
+
+
+def test_generate_qr_no_auth_required():
+    with patch("main.init_db"), patch("main.close_db"):
+        with TestClient(app) as client:
+            response = client.post("/generate-qr/", params={"url": "http://example.com"})
+    assert response.status_code == 200
+    assert response.json()["qr_code_url"].startswith("data:image/png;base64,")
 
 
 def test_create_qr_invalid_url():
     with _client() as client:
-        response = client.post("/qr-codes", json={"url": "not-a-url"})
+        response = client.post("/qr-codes", json={"url": ""})
 
     assert response.status_code == 422
 

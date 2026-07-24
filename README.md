@@ -21,10 +21,10 @@ Client → FastAPI routes (api/routes.py)
 
 | Method | Path | Notes |
 |--------|------|--------|
-| `POST` | `/qr-codes` | Auth required. JSON `{"url":"..."}` → `201` + `id` + `download_url` |
+| `POST` | `/qr-codes` | Auth required. Explicit save → S3 + DB + `download_url` |
 | `GET` | `/qr-codes` | Auth required. List my codes |
 | `GET` | `/qr-codes/{id}` | Auth required. Fresh presign (owner only) |
-| `POST` | `/generate-qr/?url=...` | Auth required. Compat for current Next.js UI |
+| `POST` | `/generate-qr/?url=...` | Public preview. Data-URL PNG only — **not** saved |
 | `GET` | `/health` | Liveness (public) |
 
 ## Env

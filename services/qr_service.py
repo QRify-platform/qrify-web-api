@@ -1,5 +1,5 @@
 """
-QR use-cases: create (S3 + DB) and fetch by id (DB + fresh presign).
+QR use-cases: preview (no persistence), save (S3 + DB), and fetch by id.
 
 This is the "service" layer — no FastAPI types here, so it's easy to test
 and easy to explain in an interview.
@@ -7,6 +7,7 @@ and easy to explain in an interview.
 
 from __future__ import annotations
 
+import base64
 from io import BytesIO
 from uuid import UUID, uuid4
 
@@ -17,12 +18,22 @@ from db import qr_codes as qr_repo
 from utils.s3_utils import PRESIGN_EXPIRES, presign_get, upload_png
 
 
+def generate_preview(source_url: str) -> dict:
+    """
+    Render a PNG and return it as a data URL.
+    Does not touch S3 or Postgres — save is a separate explicit step.
+    """
+    png = _render_png(source_url)
+    b64 = base64.standard_b64encode(png.getvalue()).decode("ascii")
+    return {
+        "source_url": source_url,
+        "qr_code_url": f"data:image/png;base64,{b64}",
+    }
+
+
 def create_qr_code(source_url: str, *, user_id: str) -> dict:
     """
-    1) Generate PNG
-    2) Upload to S3 under a unique key
-    3) Insert metadata row (owned by user_id = Cognito sub)
-    4) Return row + a fresh download_url
+    Persist a QR: render → S3 → DB row owned by Cognito sub.
     """
     qr_id = uuid4()
     s3_key = f"qr_codes/{qr_id}.png"
