@@ -9,9 +9,8 @@ permissions:
   id-token: write
   contents: read
 
-# Deploy to dev on every main push, then wait for GitHub Environment
-# "production" approval before promoting the same image tag to prod.
-# Configure required reviewers on the production environment in repo Settings.
+# Push to main → deploy dev only.
+# Actions → Release → Run workflow → build + deploy dev, then promote same tag to prod.
 
 jobs:
   deploy-dev:
@@ -40,6 +39,7 @@ jobs:
 
   promote-prod:
     needs: deploy-dev
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: production
     steps:
