@@ -70,18 +70,19 @@ def list_my_qr_codes(*, user_id: str) -> list[dict]:
 
 
 def _render_png(source_url: str) -> BytesIO:
+    # High module size + tight quiet zone so the PNG stays crisp when displayed large.
     qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=16,
+        border=2,
     )
     qr.add_data(source_url)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
+    img = qr.make_image(fill_color="#07080b", back_color="#ffffff").convert("RGB")
 
     buf = BytesIO()
-    img.save(buf, format="PNG")
+    img.save(buf, format="PNG", optimize=True)
     buf.seek(0)
     return buf
 
