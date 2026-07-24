@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from auth.cognito import get_current_user
 from services.qr_service import (
     create_qr_code,
+    delete_qr_code,
     generate_preview,
     get_qr_code,
     list_my_qr_codes,
@@ -65,6 +66,12 @@ def list_qr(user: dict[str, Any] = Depends(get_current_user)):
 def read_qr(qr_id: str, user: dict[str, Any] = Depends(get_current_user)):
     """Fetch by id and re-issue a presigned URL (owner only)."""
     return get_qr_code(qr_id, user_id=user["sub"])
+
+
+@router.delete("/qr-codes/{qr_id}", status_code=204)
+def remove_qr(qr_id: str, user: dict[str, Any] = Depends(get_current_user)):
+    """Delete a saved code (owner only)."""
+    delete_qr_code(qr_id, user_id=user["sub"])
 
 
 @router.post("/generate-qr/", response_model=GeneratePreviewResponse)

@@ -136,6 +136,37 @@ def test_list_my_qr_codes(mock_list, mock_presign):
     mock_list.assert_called_once_with("user-sub-1")
 
 
+@patch("services.qr_service.delete_object")
+@patch("services.qr_service.qr_repo.delete_qr_code_for_user", return_value=FAKE_ROW)
+@patch("services.qr_service.qr_repo.get_qr_code_by_id", return_value=FAKE_ROW)
+def test_delete_qr_code(mock_get, mock_delete_row, mock_delete_s3):
+    with _client() as client:
+        response = client.delete(f"/qr-codes/{FAKE_ROW['id']}")
+
+    assert response.status_code == 204
+    mock_delete_row.assert_called_once()
+    mock_delete_s3.assert_called_once_with(FAKE_ROW["s3_key"])
+
+
+@patch("services.qr_service.qr_repo.get_qr_code_by_id", return_value=None)
+def test_delete_qr_not_found(mock_get):
+    with _client() as client:
+        response = client.delete(f"/qr-codes/{FAKE_ROW['id']}")
+
+    assert response.status_code == 404
+
+
+@patch(
+    "services.qr_service.qr_repo.get_qr_code_by_id",
+    return_value={**FAKE_ROW, "user_id": "someone-else"},
+)
+def test_delete_qr_forbidden(mock_get):
+    with _client() as client:
+        response = client.delete(f"/qr-codes/{FAKE_ROW['id']}")
+
+    assert response.status_code == 403
+
+
 def test_health():
     with _client() as client:
         response = client.get("/health")

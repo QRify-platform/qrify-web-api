@@ -24,6 +24,7 @@ Client → FastAPI routes (api/routes.py)
 | `POST` | `/qr-codes` | Auth required. Explicit save → S3 + DB + `download_url` |
 | `GET` | `/qr-codes` | Auth required. List my codes |
 | `GET` | `/qr-codes/{id}` | Auth required. Fresh presign (owner only) |
+| `DELETE` | `/qr-codes/{id}` | Auth required. Remove DB row + S3 object (owner only) |
 | `POST` | `/generate-qr/?url=...` | Public preview. Data-URL PNG only — **not** saved |
 | `GET` | `/health` | Liveness (public) |
 
@@ -46,4 +47,4 @@ PYTHONPATH=. pytest test_main.py -v    # unit tests mock DB/S3
 
 Tech: FastAPI, Uvicorn, qrcode, boto3, psycopg, PyJWT (Cognito), Prometheus instrumentator.
 
-Auth: Cognito JWT (`Authorization: Bearer`). Create/list/get require a valid token; rows store `user_id` = Cognito `sub`.
+Auth: Cognito JWT (`Authorization: Bearer`). Create/list/get/delete require a valid token; rows store `user_id` = Cognito `sub`. Generate preview is public and does not persist.

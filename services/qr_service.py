@@ -15,7 +15,7 @@ import qrcode
 from fastapi import HTTPException
 
 from db import qr_codes as qr_repo
-from utils.s3_utils import PRESIGN_EXPIRES, presign_get, upload_png
+from utils.s3_utils import PRESIGN_EXPIRES, delete_object, presign_get, upload_png
 
 
 def generate_preview(source_url: str) -> dict:
@@ -78,6 +78,30 @@ def get_qr_code(qr_id: str, *, user_id: str) -> dict:
 def list_my_qr_codes(*, user_id: str) -> list[dict]:
     rows = qr_repo.list_qr_codes_for_user(user_id)
     return [_with_download_url(row) for row in rows]
+
+
+def delete_qr_code(qr_id: str, *, user_id: str) -> None:
+    """Owner-only delete: remove DB row, then best-effort delete S3 object."""
+    try:
+        parsed = UUID(qr_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="id must be a UUID") from exc
+
+    existing = qr_repo.get_qr_code_by_id(parsed)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="QR code not found")
+    if existing.get("user_id") and existing["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Not your QR code")
+
+    deleted = qr_repo.delete_qr_code_for_user(parsed, user_id)
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="QR code not found")
+
+    try:
+        delete_object(deleted["s3_key"])
+    except Exception:
+        # Row is gone; orphaned S3 object is acceptable for this demo.
+        pass
 
 
 def _render_png(source_url: str) -> BytesIO:

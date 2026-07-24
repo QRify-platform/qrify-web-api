@@ -49,6 +49,11 @@ def upload_png(file_buffer, s3_key: str) -> None:
     )
 
 
+def delete_object(s3_key: str) -> None:
+    """Remove a private object. Missing keys are fine (idempotent cleanup)."""
+    s3.delete_object(Bucket=BUCKET_NAME, Key=s3_key)
+
+
 def presign_get(s3_key: str, expires_in: int = PRESIGN_EXPIRES) -> str:
     """Temporary GET URL for a private object. Safe to call again later for the same key."""
     return s3.generate_presigned_url(

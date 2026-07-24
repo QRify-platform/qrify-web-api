@@ -56,6 +56,21 @@ def list_qr_codes_for_user(user_id: str) -> list[dict[str, Any]]:
     return [_normalize(row) for row in rows]
 
 
+def delete_qr_code_for_user(qr_id: UUID, user_id: str) -> dict[str, Any] | None:
+    """Delete row if owned by user_id. Returns the deleted row, or None if missing/not owned."""
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            DELETE FROM qr_codes
+            WHERE id = %s AND user_id = %s
+            RETURNING id, source_url, s3_key, user_id, created_at
+            """,
+            (str(qr_id), user_id),
+        ).fetchone()
+        conn.commit()
+    return _normalize(row) if row else None
+
+
 def _normalize(row: dict[str, Any]) -> dict[str, Any]:
     """Make UUID / datetime JSON-friendly for responses."""
     created: datetime = row["created_at"]
