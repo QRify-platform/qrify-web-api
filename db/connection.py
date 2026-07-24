@@ -1,0 +1,65 @@
+"""
+Postgres access for QRify.
+
+Interview talking point:
+  - S3 holds the PNG bytes
+  - Postgres holds durable metadata (id ↔ s3_key)
+  - Presigned URLs are NOT stored; we recreate them from s3_key on read
+"""
+
+from __future__ import annotations
+
+import os
+from contextlib import contextmanager
+from typing import Iterator
+
+from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
+
+_pool: ConnectionPool | None = None
+
+SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS qr_codes (
+    id          UUID PRIMARY KEY,
+    source_url  TEXT NOT NULL,
+    s3_key      TEXT NOT NULL UNIQUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+"""
+
+
+def init_db() -> None:
+    """Open a connection pool and ensure the qr_codes table exists."""
+    global _pool
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError(
+            "DATABASE_URL is not set. "
+            "In cluster it comes from the qrify-web-api-db secret (ESO)."
+        )
+
+    _pool = ConnectionPool(
+        conninfo=database_url,
+        min_size=1,
+        max_size=5,
+        kwargs={"row_factory": dict_row},
+        open=True,
+    )
+    with _pool.connection() as conn:
+        conn.execute(SCHEMA_SQL)
+        conn.commit()
+
+
+def close_db() -> None:
+    global _pool
+    if _pool is not None:
+        _pool.close()
+        _pool = None
+
+
+@contextmanager
+def get_connection() -> Iterator:
+    if _pool is None:
+        raise RuntimeError("Database pool is not initialized")
+    with _pool.connection() as conn:
+        yield conn

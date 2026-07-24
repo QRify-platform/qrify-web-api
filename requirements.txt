@@ -9,6 +9,9 @@ h11==0.14.0
 idna==3.6
 jmespath==1.0.1
 pillow==10.2.0
+prometheus-fastapi-instrumentator==6.1.0
+psycopg[binary]==3.2.3
+psycopg-pool==3.2.3
 pydantic==2.5.2
 pydantic_core==2.14.5
 pypng==0.20220715.0
@@ -22,5 +25,3 @@ starlette==0.27.0
 typing_extensions==4.9.0
 urllib3==1.26.18
 uvicorn==0.24.0.post1
-prometheus-fastapi-instrumentator==6.1.0
-

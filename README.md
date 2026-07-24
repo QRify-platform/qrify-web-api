@@ -1,44 +1,46 @@
 # QRify Web API
 
-**QRify Web API** is the backend service for the QRify platform. It provides a FastAPI-powered endpoint to generate QR codes from user-submitted URLs and store them in an AWS S3 bucket.
----
-## 🚀 Features
+Backend for QRify: generate QR PNGs, store them in private S3, and keep durable metadata in Postgres.
 
-- 🔗 Accepts a **URL** via API and generates a PNG QR Code
-- ☁️ Uploads the QR code to **Amazon S3**
-- 🌍 Returns a **publicly accessible URL** to the QR code (via presigned S3 link)
-- 🌐 Supports **CORS** for local frontend development
-- 🩺 **Health check** endpoint at `/health` for monitoring readiness
-- 📊 **Prometheus metrics** exposed at `/metrics` for observability and scraping
-- 🧪 Lightweight, fast, and cloud-ready — perfect for serverless, containers or Kubernetes
----
-## ⚙️ Tech Stack
-| Technology   | Description                                      |
-|--------------|--------------------------------------------------|
-| FastAPI      | Python async web framework                       |
-| Uvicorn      | ASGI server to run FastAPI                       |
-| qrcode       | Python QR code generation library                |
-| Boto3        | AWS SDK for Python (used for S3 uploads)         |
-| python-dotenv| Loads environment variables from `.env`          |
-| Prometheus   | Monitoring tool, scrapes metrics from API        |
-| Instrumentator | Exposes FastAPI metrics in Prometheus format  |
-| CORS         | Cross-Origin Resource Sharing (frontend support) |
+## How it fits together (interview cheat sheet)
 
----
+```
+Client → FastAPI routes (api/routes.py)
+       → service (services/qr_service.py)     # business flow
+       → db/qr_codes.py                       # INSERT / SELECT
+       → utils/s3_utils.py                    # put_object + presign GET
+```
 
-## 📦 Setup
+| Concern | Where | Why |
+|---------|--------|-----|
+| PNG bytes | S3 key `qr_codes/{uuid}.png` | Object storage |
+| id ↔ s3_key | Postgres `qr_codes` | Durable lookup after presign expires |
+| Download URL | Generated on each create/get | Short-lived (~10 min), never stored |
 
-### ✅ Prerequisites
+## Endpoints
 
-- Python 3.9+
-- AWS Account with:
-  - S3 Bucket created
-  - Programmatic access enabled
+| Method | Path | Notes |
+|--------|------|--------|
+| `POST` | `/qr-codes` | JSON `{"url":"..."}` → `201` + `id` + `download_url` |
+| `GET` | `/qr-codes/{id}` | Fresh presign from stored `s3_key` |
+| `POST` | `/generate-qr/?url=...` | Compat for current Next.js UI |
+| `GET` | `/health` | Liveness |
 
----
+## Env
 
-### 📁 Clone and Install
+| Variable | Source |
+|----------|--------|
+| `DATABASE_URL` | Secrets Manager → ESO → `qrify-web-api-db` |
+| `S3_BUCKET_NAME` | Chart / env |
+| `AWS_REGION` | Chart / env (IRSA in cluster; no static keys) |
+
+## Local
 
 ```bash
 cd qrify-web-api
-pip install -r requirements.txt
+pip install -r requirements.txt httpx==0.27.2 pytest
+export DATABASE_URL=postgresql://...   # needed at startup
+PYTHONPATH=. pytest test_main.py -v    # unit tests mock DB/S3
+```
+
+Tech: FastAPI, Uvicorn, qrcode, boto3, psycopg, Prometheus instrumentator.
