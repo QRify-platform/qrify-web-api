@@ -25,8 +25,10 @@ Client → FastAPI routes (api/routes.py)
 | `GET` | `/qr-codes` | Auth required. List my codes |
 | `GET` | `/qr-codes/{id}` | Auth required. Fresh presign (owner only) |
 | `DELETE` | `/qr-codes/{id}` | Auth required. Remove DB row + S3 object (owner only) |
-| `POST` | `/generate-qr/?url=...` | Public preview. Data-URL PNG only — **not** saved |
+| `POST` | `/generate-qr/` | Public preview. JSON `{"url":"..."}` → data-URL PNG. **Not** saved. Rate-limited. |
 | `GET` | `/health` | Liveness (public) |
+
+Rate limits (per client IP, in-memory): generate ~30/min, create/delete ~60/min. Disable with `RATE_LIMIT_ENABLED=false`.
 
 ## Env
 

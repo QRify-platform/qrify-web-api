@@ -4,6 +4,11 @@ We stub the DB lifecycle and the service's I/O adapters.
 Auth is overridden (no real Cognito JWT).
 """
 
+import os
+
+# Keep unit tests from tripping the in-memory rate limiter.
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+
 from contextlib import contextmanager
 from unittest.mock import patch
 
@@ -25,7 +30,6 @@ FAKE_URL = "https://s3.example.com/presigned"
 
 @contextmanager
 def _client():
-    # Keep patches active for the whole TestClient lifespan (startup + requests).
     app.dependency_overrides[get_current_user] = lambda: FAKE_USER
     try:
         with patch("main.init_db"), patch("main.close_db"):
@@ -60,7 +64,7 @@ def test_create_qr_codes(mock_insert, mock_upload, mock_presign):
 def test_generate_qr_is_preview_only(mock_insert, mock_upload, mock_presign):
     """Generate returns a data URL and does not persist."""
     with _client() as client:
-        response = client.post("/generate-qr/", params={"url": "http://example.com"})
+        response = client.post("/generate-qr/", json={"url": "http://example.com"})
 
     assert response.status_code == 200
     body = response.json()
@@ -74,7 +78,7 @@ def test_generate_qr_is_preview_only(mock_insert, mock_upload, mock_presign):
 def test_generate_qr_no_auth_required():
     with patch("main.init_db"), patch("main.close_db"):
         with TestClient(app) as client:
-            response = client.post("/generate-qr/", params={"url": "http://example.com"})
+            response = client.post("/generate-qr/", json={"url": "http://example.com"})
     assert response.status_code == 200
     assert response.json()["qr_code_url"].startswith("data:image/png;base64,")
 
@@ -165,6 +169,36 @@ def test_delete_qr_forbidden(mock_get):
         response = client.delete(f"/qr-codes/{FAKE_ROW['id']}")
 
     assert response.status_code == 403
+
+
+def test_generate_rate_limit():
+    """With limiting enabled, burst generate calls eventually return 429."""
+    from utils import rate_limit as rl
+
+    rl._ENABLED = True
+    original = (rl.generate_limiter.max_calls, rl.generate_limiter.period)
+    rl.generate_limiter.max_calls = 3
+    rl.generate_limiter.period = 60
+    rl.generate_limiter._hits.clear()
+
+    try:
+        with patch("main.init_db"), patch("main.close_db"):
+            with TestClient(app) as client:
+                for _ in range(3):
+                    assert (
+                        client.post(
+                            "/generate-qr/", json={"url": "http://example.com"}
+                        ).status_code
+                        == 200
+                    )
+                blocked = client.post(
+                    "/generate-qr/", json={"url": "http://example.com"}
+                )
+                assert blocked.status_code == 429
+    finally:
+        rl.generate_limiter.max_calls, rl.generate_limiter.period = original
+        rl.generate_limiter._hits.clear()
+        rl._ENABLED = False
 
 
 def test_health():

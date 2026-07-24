@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from auth.cognito import get_current_user
@@ -20,12 +20,14 @@ from services.qr_service import (
     get_qr_code,
     list_my_qr_codes,
 )
+from utils.rate_limit import client_ip, generate_limiter, write_limiter
 
 router = APIRouter()
 
 
-class CreateQrRequest(BaseModel):
-    # May be https://..., mailto:, WIFI:, plain text, vCard, etc.
+class PayloadRequest(BaseModel):
+    """QR payload: https://..., mailto:, WIFI:, plain text, vCard, etc."""
+
     url: str = Field(..., min_length=1, max_length=4096)
 
 
@@ -37,7 +39,8 @@ class QrCodeResponse(BaseModel):
     created_at: str
     download_url: str
     expires_in: int
-    qr_code_url: str  # alias of download_url for the current web UI
+    # Compat alias used by the web UI.
+    qr_code_url: str
 
 
 class GeneratePreviewResponse(BaseModel):
@@ -51,8 +54,13 @@ def health():
 
 
 @router.post("/qr-codes", response_model=QrCodeResponse, status_code=201)
-def create_qr(body: CreateQrRequest, user: dict[str, Any] = Depends(get_current_user)):
+def create_qr(
+    request: Request,
+    body: PayloadRequest,
+    user: dict[str, Any] = Depends(get_current_user),
+):
     """Explicit save: S3 + DB, owned by the signed-in user."""
+    write_limiter.hit(client_ip(request))
     return create_qr_code(body.url.strip(), user_id=user["sub"])
 
 
@@ -69,20 +77,26 @@ def read_qr(qr_id: str, user: dict[str, Any] = Depends(get_current_user)):
 
 
 @router.delete("/qr-codes/{qr_id}", status_code=204)
-def remove_qr(qr_id: str, user: dict[str, Any] = Depends(get_current_user)):
+def remove_qr(
+    request: Request,
+    qr_id: str,
+    user: dict[str, Any] = Depends(get_current_user),
+):
     """Delete a saved code (owner only)."""
+    write_limiter.hit(client_ip(request))
     delete_qr_code(qr_id, user_id=user["sub"])
 
 
 @router.post("/generate-qr/", response_model=GeneratePreviewResponse)
-def generate_qr_preview(
-    url: str = Query(..., min_length=1, max_length=4096),
-):
+def generate_qr_preview(request: Request, body: PayloadRequest):
     """
     Preview only — returns a data-URL PNG. Does not save to S3 or Postgres.
-    Use POST /qr-codes to persist.
+    Use POST /qr-codes to persist. Rate-limited per client IP.
     """
+    generate_limiter.hit(client_ip(request))
     try:
-        return generate_preview(url.strip())
+        return generate_preview(body.url.strip())
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail="QR code generation failed") from exc
