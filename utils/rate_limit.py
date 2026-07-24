@@ -37,13 +37,11 @@ class RateLimiter:
             self._hits[key] = window
 
 
-# Public PNG render is the expensive path — tighter than authenticated saves.
 generate_limiter = RateLimiter(max_calls=30, period_seconds=60, name="generate")
 write_limiter = RateLimiter(max_calls=60, period_seconds=60, name="write")
 
 
 def client_ip(request: Request) -> str:
-    """Prefer X-Forwarded-For when behind nginx ingress."""
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         return forwarded.split(",")[0].strip()
